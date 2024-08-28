@@ -41,7 +41,7 @@ function notifyAdmin(message) {
 function saveFeedback(type, text, userId, contact = null) {
     console.log(`Saving feedback: Type=${type}, Text=${text}, UserId=${userId}, Contact=${contact}`);
     client.query(
-        'INSERT INTO feedbacks (feedback_type, feedback_text, contact_info, user_id) VALUES ($1, $2, $3, $4)',
+        'INSERT INTO feedbacks (feedback_type, feedback_text, contact_info, user_id, created_at) VALUES ($1, $2, $3, $4, NOW())',
         [type, text, contact, userId],
         (err) => {
             if (err) {
@@ -60,6 +60,7 @@ async function canSubmitFeedback(userId) {
         const lastFeedbackTime = new Date(res.rows[0].created_at);
         const now = new Date();
         const hoursSinceLastFeedback = (now - lastFeedbackTime) / (1000 * 60 * 60);
+        console.log(`Last feedback: ${lastFeedbackTime}, Hours since last feedback: ${hoursSinceLastFeedback}`);
         return hoursSinceLastFeedback >= FEEDBACK_INTERVAL_HOURS;
     }
     return true;
