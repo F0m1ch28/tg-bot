@@ -21,7 +21,6 @@ const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID;
 const PAGE_SIZE = 10;
 const FEEDBACK_INTERVAL_HOURS = 24;
 
-// Initialize session middleware
 bot.use(session());
 
 function notifyAdmin(message) {
@@ -156,7 +155,7 @@ bot.action(/page_(\d+)/, async (ctx) => {
 bot.action('positive', async (ctx) => {
     if (await canSubmitFeedback(ctx.from.id)) {
         ctx.reply('Поделитесь вашими впечатлениями');
-        ctx.session = ctx.session || {}; // Ensure session object exists
+        ctx.session = ctx.session || {};
         ctx.session.feedbackType = 'positive';
     } else {
         ctx.reply('Вы уже оставляли отзыв недавно. Пожалуйста, попробуйте снова через 24 часа.');
@@ -166,7 +165,7 @@ bot.action('positive', async (ctx) => {
 bot.action('negative', async (ctx) => {
     if (await canSubmitFeedback(ctx.from.id)) {
         ctx.reply('Опишите проблему и оставьте контактный номер для решения ситуации');
-        ctx.session = ctx.session || {}; // Ensure session object exists
+        ctx.session = ctx.session || {};
         ctx.session.feedbackType = 'negative';
     } else {
         ctx.reply('Вы уже оставляли отзыв недавно. Пожалуйста, попробуйте снова через 24 часа.');
@@ -174,7 +173,6 @@ bot.action('negative', async (ctx) => {
 });
 
 bot.on('text', async (ctx) => {
-    // Ensure session object exists
     ctx.session = ctx.session || {};
     const feedbackType = ctx.session.feedbackType;
 
