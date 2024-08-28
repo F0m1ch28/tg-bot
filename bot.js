@@ -13,11 +13,9 @@ const client = new Client({
     ssl: { rejectUnauthorized: false }
 });
 
-client.connect().then(() => {
-    console.log('Connected to PostgreSQL');
-}).catch(err => {
-    console.error('Connection error', err.stack);
-});
+client.connect()
+    .then(() => console.log('Connected to PostgreSQL'))
+    .catch(err => console.error('Connection error', err.stack));
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID;
@@ -47,9 +45,9 @@ function saveFeedback(type, text, userId, contact = null) {
         [type, text, contact, userId],
         (err) => {
             if (err) {
-                console.error('Ошибка сохранения в базу данных:', err.stack);
+                console.error('Error saving to database:', err.stack);
             } else {
-                console.log('Отзыв сохранен в базу данных');
+                console.log('Feedback saved to database');
             }
         }
     );
@@ -120,7 +118,7 @@ async function showFeedbacks(ctx, page = 1, filterType = '', filterStartDate = n
             ])
         );
     } catch (err) {
-        console.error('Ошибка выполнения запроса:', err.stack);
+        console.error('Error executing query:', err.stack);
         ctx.reply('Ошибка получения отзывов из базы данных.');
     }
 }
