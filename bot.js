@@ -1,0 +1,198 @@
+require('dotenv').config();
+const { Telegraf, Markup, session } = require('telegraf');
+const { Client } = require('pg');
+
+const client = new Client({
+    user: process.env.PG_USER,
+    host: process.env.PG_HOST,
+    database: process.env.PG_DATABASE,
+    password: process.env.PG_PASSWORD,
+    port: process.env.PG_PORT,
+});
+
+client.connect().then(() => {
+    console.log('Connected to PostgreSQL');
+}).catch(err => {
+    console.error('Connection error', err.stack);
+});
+
+const bot = new Telegraf(process.env.BOT_TOKEN);
+const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID;
+const PAGE_SIZE = 10;
+const FEEDBACK_INTERVAL_HOURS = 24;
+
+// Initialize session middleware
+bot.use(session());
+
+function notifyAdmin(message) {
+    bot.telegram.sendMessage(ADMIN_CHAT_ID, message);
+}
+
+function saveFeedback(type, text, userId, contact = null) {
+    console.log(`Saving feedback: Type=${type}, Text=${text}, UserId=${userId}, Contact=${contact}`);
+    client.query(
+        'INSERT INTO feedbacks (feedback_type, feedback_text, contact_info, user_id) VALUES ($1, $2, $3, $4)',
+        [type, text, contact, userId],
+        (err) => {
+            if (err) {
+                console.error('Ошибка сохранения в базу данных:', err.stack);
+            } else {
+                console.log('Отзыв сохранен в базу данных');
+            }
+        }
+    );
+}
+
+async function canSubmitFeedback(userId) {
+    const query = 'SELECT created_at FROM feedbacks WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1';
+    const res = await client.query(query, [userId]);
+    if (res.rows.length > 0) {
+        const lastFeedbackTime = new Date(res.rows[0].created_at);
+        const now = new Date();
+        const hoursSinceLastFeedback = (now - lastFeedbackTime) / (1000 * 60 * 60);
+        return hoursSinceLastFeedback >= FEEDBACK_INTERVAL_HOURS;
+    }
+    return true;
+}
+
+async function showFeedbacks(ctx, page = 1, filterType = '', filterStartDate = null, filterEndDate = null) {
+    const offset = (page - 1) * PAGE_SIZE;
+
+    let query = 'SELECT * FROM feedbacks WHERE 1=1';
+    let queryParams = [];
+    let paramIndex = 1;
+
+    if (filterType) {
+        query += ` AND feedback_type = $${paramIndex++}`;
+        queryParams.push(filterType);
+    }
+
+    if (filterStartDate) {
+        query += ` AND created_at >= $${paramIndex++}`;
+        queryParams.push(new Date(filterStartDate).toISOString());
+    }
+
+    if (filterEndDate) {
+        query += ` AND created_at <= $${paramIndex++}`;
+        queryParams.push(new Date(filterEndDate).toISOString());
+    }
+
+    query += ` ORDER BY created_at DESC LIMIT $${paramIndex++} OFFSET $${paramIndex}`;
+    queryParams.push(PAGE_SIZE, offset);
+
+    try {
+        console.log(`Executing query: ${query}`);
+        console.log(`With parameters: ${queryParams}`);
+
+        const res = await client.query(query, queryParams);
+        const feedbacks = res.rows.map(fb =>
+            `ID: ${fb.id}\nТип: ${fb.feedback_type}\nОтзыв: ${fb.feedback_text}\nКонтакт: ${fb.contact_info || 'Не указан'}\nДата: ${fb.created_at}`
+        ).join('\n\n');
+
+        const totalFeedbacks = await client.query(
+            'SELECT COUNT(*) FROM feedbacks WHERE 1=1' +
+            (filterType ? ` AND feedback_type = '${filterType}'` : '') +
+            (filterStartDate ? ` AND created_at >= '${new Date(filterStartDate).toISOString()}'` : '') +
+            (filterEndDate ? ` AND created_at <= '${new Date(filterEndDate).toISOString()}'` : '')
+        );
+
+        const total = parseInt(totalFeedbacks.rows[0].count);
+        const totalPages = Math.ceil(total / PAGE_SIZE);
+
+        ctx.reply(
+            feedbacks || 'Нет отзывов.',
+            Markup.inlineKeyboard([
+                Markup.button.callback('Предыдущая', `prev_${page}`),
+                Markup.button.callback('Следующая', `next_${page}`),
+                Markup.button.callback(`Страница ${page} из ${totalPages}`, `page_${page}`)
+            ])
+        );
+    } catch (err) {
+        console.error('Ошибка выполнения запроса:', err.stack);
+        ctx.reply('Ошибка получения отзывов из базы данных.');
+    }
+}
+
+bot.start((ctx) => {
+    ctx.reply(
+        'Вас всё устроило?',
+        Markup.inlineKeyboard([
+            Markup.button.callback('Да', 'positive'),
+            Markup.button.callback('Нет', 'negative')
+        ])
+    );
+});
+
+bot.command('show_feedbacks', async (ctx) => {
+    if (ctx.from.id.toString() === ADMIN_CHAT_ID) {
+        const args = ctx.message.text.split(' ');
+        const page = parseInt(args[1]) || 1;
+
+        await showFeedbacks(ctx, page);
+    } else {
+        ctx.reply('У вас нет доступа к этой команде.');
+    }
+});
+
+bot.action(/prev_(\d+)/, async (ctx) => {
+    const page = parseInt(ctx.match[1]);
+    if (page > 1) {
+        await showFeedbacks(ctx, page - 1);
+    } else {
+        ctx.answerCbQuery('Это первая страница.');
+    }
+});
+
+bot.action(/next_(\d+)/, async (ctx) => {
+    const page = parseInt(ctx.match[1]);
+    await showFeedbacks(ctx, page + 1);
+});
+
+bot.action(/page_(\d+)/, async (ctx) => {
+    const page = parseInt(ctx.match[1]);
+    await showFeedbacks(ctx, page);
+});
+
+bot.action('positive', async (ctx) => {
+    if (await canSubmitFeedback(ctx.from.id)) {
+        ctx.reply('Поделитесь вашими впечатлениями');
+        ctx.session = ctx.session || {}; // Ensure session object exists
+        ctx.session.feedbackType = 'positive';
+    } else {
+        ctx.reply('Вы уже оставляли отзыв недавно. Пожалуйста, попробуйте снова через 24 часа.');
+    }
+});
+
+bot.action('negative', async (ctx) => {
+    if (await canSubmitFeedback(ctx.from.id)) {
+        ctx.reply('Опишите проблему и оставьте контактный номер для решения ситуации');
+        ctx.session = ctx.session || {}; // Ensure session object exists
+        ctx.session.feedbackType = 'negative';
+    } else {
+        ctx.reply('Вы уже оставляли отзыв недавно. Пожалуйста, попробуйте снова через 24 часа.');
+    }
+});
+
+bot.on('text', async (ctx) => {
+    // Ensure session object exists
+    ctx.session = ctx.session || {};
+    const feedbackType = ctx.session.feedbackType;
+
+    if (feedbackType) {
+        const feedback = ctx.message.text;
+
+        if (feedbackType === 'positive') {
+            ctx.reply('Благодарим за обратную связь, ваши слова — наша мотивация.');
+            saveFeedback('positive', feedback, ctx.from.id);
+            notifyAdmin(`Получен положительный отзыв\n\nОтзыв: ${feedback}`);
+        } else if (feedbackType === 'negative') {
+            ctx.reply('Ваш отзыв направлен в отдел контроля качества.');
+            saveFeedback('negative', feedback, ctx.from.id);
+            notifyAdmin(`Получен отрицательный отзыв\n\nОтзыв: ${feedback}`);
+        }
+
+        delete ctx.session.feedbackType;
+    }
+});
+
+bot.launch().then(() => console.log('Bot is running...'));
