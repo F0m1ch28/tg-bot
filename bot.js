@@ -1,6 +1,8 @@
 require('dotenv').config();
 const { Telegraf, Markup, session } = require('telegraf');
 const { Client } = require('pg');
+const express = require('express');
+const bodyParser = require('body-parser');
 
 const client = new Client({
     user: process.env.PG_USER,
@@ -8,23 +10,28 @@ const client = new Client({
     database: process.env.PG_DATABASE,
     password: process.env.PG_PASSWORD,
     port: process.env.PG_PORT,
-    ssl: {
-        rejectUnauthorized: false
-    }
+    ssl: { rejectUnauthorized: false }
 });
 
-client.connect()
-    .then(() => {
-        console.log('Connected to PostgreSQL');
-    })
-    .catch(err => {
-        console.error('Connection error', err.stack);
-    });
+client.connect().then(() => {
+    console.log('Connected to PostgreSQL');
+}).catch(err => {
+    console.error('Connection error', err.stack);
+});
 
 const bot = new Telegraf(process.env.BOT_TOKEN);
 const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID;
 const PAGE_SIZE = 10;
 const FEEDBACK_INTERVAL_HOURS = 24;
+
+const app = express();
+app.use(bodyParser.json());
+
+bot.telegram.setWebhook(`${process.env.HOST_URL}/webhook/${process.env.BOT_TOKEN}`);
+app.post(`/webhook/${process.env.BOT_TOKEN}`, (req, res) => {
+    bot.handleUpdate(req.body);
+    res.sendStatus(200);
+});
 
 bot.use(session());
 
@@ -198,4 +205,7 @@ bot.on('text', async (ctx) => {
     }
 });
 
-bot.launch().then(() => console.log('Bot is running...'));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+});
