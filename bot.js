@@ -25,7 +25,7 @@ const FEEDBACK_INTERVAL_HOURS = 24;
 const app = express();
 app.use(bodyParser.json());
 
-const HOST_URL = 'https://tg-bot-2-mt2b.onrender.com';
+const HOST_URL = 'https://tg-bot-k259.onrender.com';
 bot.telegram.setWebhook(`${HOST_URL}/webhook/${process.env.BOT_TOKEN}`);
 app.post(`/webhook/${process.env.BOT_TOKEN}`, (req, res) => {
     bot.handleUpdate(req.body);
