@@ -27,10 +27,16 @@ const FEEDBACK_INTERVAL_HOURS = 24;
 const app = express();
 app.use(bodyParser.json());
 
-bot.telegram.setWebhook(`${process.env.HOST_URL}/webhook/${process.env.BOT_TOKEN}`);
+const webhookUrl = `${process.env.HOST_URL}/webhook/${process.env.BOT_TOKEN}`;
+bot.telegram.setWebhook(webhookUrl);
+
 app.post(`/webhook/${process.env.BOT_TOKEN}`, (req, res) => {
-    bot.handleUpdate(req.body);
-    res.sendStatus(200);
+    bot.handleUpdate(req.body).then(() => {
+        res.sendStatus(200);
+    }).catch(err => {
+        console.error('Error handling update:', err.stack);
+        res.sendStatus(500);
+    });
 });
 
 bot.use(session());
@@ -46,9 +52,9 @@ function saveFeedback(type, text, userId, contact = null) {
         [type, text, contact, userId],
         (err) => {
             if (err) {
-                console.error('Ошибка сохранения в базу данных:', err.stack);
+                console.error('Error saving to database:', err.stack);
             } else {
-                console.log('Отзыв сохранен в базу данных');
+                console.log('Feedback saved to database');
             }
         }
     );
@@ -119,7 +125,7 @@ async function showFeedbacks(ctx, page = 1, filterType = '', filterStartDate = n
             ])
         );
     } catch (err) {
-        console.error('Ошибка выполнения запроса:', err.stack);
+        console.error('Error executing query:', err.stack);
         ctx.reply('Ошибка получения отзывов из базы данных.');
     }
 }
