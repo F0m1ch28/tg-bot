@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Telegraf, Markup, session } = require('telegraf');
+const { Telegraf, session } = require('telegraf');
 const { Client } = require('pg');
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -13,7 +13,7 @@ const client = new Client({
     password: process.env.PG_PASSWORD,
     port: process.env.PG_PORT,
     ssl: ssl,
-    connectionTimeoutMillis: 10000,
+    connectionTimeoutMillis: 20000,
     query_timeout: 120000
 });
 
@@ -130,7 +130,7 @@ async function showFeedbacks(ctx, page = 1, filterType = '', filterStartDate = n
 }
 
 bot.start((ctx) => {
-    ctx.reply('Здравствуйте! Я бот сети суши-баров «Вкус и Лосось» для обратной связи. Можете оставить ваш отзыв в любое время.');
+    ctx.reply('Здравствуйте! Я бот сети суши-баров «Вкус и Лосось» для обратной связи. Напишите ваш отзыв, чтобы оставить обратную связь.');
 });
 
 bot.command('show_feedbacks', async (ctx) => {
@@ -190,9 +190,16 @@ bot.on('text', async (ctx) => {
     if (feedbackType) {
         const feedback = ctx.message.text;
 
-        ctx.reply('Благодарим за обратную связь. Ваш ответ был направлен менеджеру. Мы постараемся связаться с Вами в ближайшее время!');
-        saveFeedback(feedbackType, feedback, ctx.from.id);
-        notifyAdmin(`Получен отзыв (${feedbackType}): ${feedback}`);
+        if (feedbackType === 'positive') {
+            ctx.reply('Благодарим за обратную связь. Ваш ответ был направлен менеджеру. Мы постараемся связаться с Вами в ближайшее время!');
+            saveFeedback('positive', feedback, ctx.from.id);
+            notifyAdmin(`Получен положительный отзыв\n\nОтзыв: ${feedback}`);
+        } else if (feedbackType === 'negative') {
+            ctx.reply('Благодарим за обратную связь. Ваш ответ был направлен менеджеру. Мы постараемся связаться с Вами в ближайшее время!');
+            saveFeedback('negative', feedback, ctx.from.id);
+            notifyAdmin(`Получен отрицательный отзыв\n\nОтзыв: ${feedback}`);
+        }
+
         delete ctx.session.feedbackType;
     }
 });
