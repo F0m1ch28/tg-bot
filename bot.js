@@ -24,7 +24,7 @@ client.connect()
 const bot = new Telegraf(process.env.BOT_TOKEN);
 const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID;
 const PAGE_SIZE = 10;
-const FEEDBACK_INTERVAL_HOURS = 24;
+// const FEEDBACK_INTERVAL_HOURS = 24;
 
 const app = express();
 app.use(bodyParser.json());
@@ -58,18 +58,18 @@ function saveFeedback(type, text, userId, contact = null) {
     );
 }
 
-async function canSubmitFeedback(userId) {
-    const query = 'SELECT created_at FROM feedback WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1';
-    const res = await client.query(query, [userId]);
-    if (res.rows.length > 0) {
-        const lastFeedbackTime = new Date(res.rows[0].created_at);
-        const now = new Date();
-        const hoursSinceLastFeedback = (now - lastFeedbackTime) / (1000 * 60 * 60);
-        console.log(`Last feedback: ${lastFeedbackTime}, Hours since last feedback: ${hoursSinceLastFeedback}`);
-        return hoursSinceLastFeedback >= FEEDBACK_INTERVAL_HOURS;
-    }
-    return true;
-}
+// async function canSubmitFeedback(userId) {
+//     const query = 'SELECT created_at FROM feedback WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1';
+//     const res = await client.query(query, [userId]);
+//     if (res.rows.length > 0) {
+//         const lastFeedbackTime = new Date(res.rows[0].created_at);
+//         const now = new Date();
+//         const hoursSinceLastFeedback = (now - lastFeedbackTime) / (1000 * 60 * 60);
+//         console.log(`Last feedback: ${lastFeedbackTime}, Hours since last feedback: ${hoursSinceLastFeedback}`);
+//         return hoursSinceLastFeedback >= FEEDBACK_INTERVAL_HOURS;
+//     }
+//     return true;
+// }
 
 async function showFeedbacks(ctx, page = 1, filterType = '', filterStartDate = null, filterEndDate = null) {
     const offset = (page - 1) * PAGE_SIZE;
@@ -164,15 +164,15 @@ bot.action(/page_(\d+)/, async (ctx) => {
 });
 
 bot.on('text', async (ctx) => {
-    if (await canSubmitFeedback(ctx.from.id)) {
+    // if (await canSubmitFeedback(ctx.from.id)) {
         ctx.session.feedbackText = ctx.message.text;
         ctx.reply('Спасибо за ваш отзыв! Пожалуйста, уточните, является ли он положительным или отрицательным.', Markup.inlineKeyboard([
             Markup.button.callback('Положительный', 'positive_feedback'),
             Markup.button.callback('Отрицательный', 'negative_feedback')
         ]));
-    } else {
-        ctx.reply('Вы уже оставляли отзыв недавно. Пожалуйста, попробуйте снова через 24 часа.');
-    }
+    // } else {
+    //     ctx.reply('Вы уже оставляли отзыв недавно. Пожалуйста, попробуйте снова через 24 часа.');
+    // }
 });
 
 bot.action('positive_feedback', (ctx) => {
