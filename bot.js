@@ -57,8 +57,6 @@ function saveFeedback(type, text, userId, contact = null) {
     );
 }
 
-// Убрана проверка на возможность оставлять повторные отзывы
-
 async function showFeedbacks(ctx, page = 1, filterType = '', filterStartDate = null, filterEndDate = null) {
     const offset = (page - 1) * PAGE_SIZE;
 
@@ -118,7 +116,7 @@ async function showFeedbacks(ctx, page = 1, filterType = '', filterStartDate = n
 }
 
 bot.start((ctx) => {
-    ctx.reply('Здравствуйте! Я бот сети суши-баров «Вкус и Лосось» для обратной связи. Нажмите «/start», чтобы оставить обратную связь');
+    ctx.reply('Здравствуйте! Я бот сети суши-баров «Вкус и Лосось» для обратной связи. Напишите Ваш отзыв.');
 });
 
 bot.command('show_feedbacks', async (ctx) => {
@@ -132,55 +130,35 @@ bot.command('show_feedbacks', async (ctx) => {
     }
 });
 
-bot.action(/prev_(\d+)/, async (ctx) => {
-    const page = parseInt(ctx.match[1]);
-    if (page > 1) {
-        await showFeedbacks(ctx, page - 1);
-    } else {
-        ctx.answerCbQuery('Это первая страница.');
-    }
-});
-
-bot.action(/next_(\d+)/, async (ctx) => {
-    const page = parseInt(ctx.match[1]);
-    await showFeedbacks(ctx, page + 1);
-});
-
-bot.action(/page_(\d+)/, async (ctx) => {
-    const page = parseInt(ctx.match[1]);
-    await showFeedbacks(ctx, page);
-});
-
 bot.action('positive', async (ctx) => {
-    ctx.reply('Опишите Вашу проблему. Также, просим Вас оставить номер, дату, время заказа и ваш контактный номер телефона, через который мы сможем с Вами связаться для решения вашей проблемы');
-    ctx.session = ctx.session || {};
+    ctx.reply('Опишите Вашу проблему.');
     ctx.session.feedbackType = 'positive';
 });
 
 bot.action('negative', async (ctx) => {
-    ctx.reply('Опишите Вашу проблему. Также, просим Вас оставить номер, дату, время заказа и ваш контактный номер телефона, через который мы сможем с Вами связаться для решения вашей проблемы');
-    ctx.session = ctx.session || {};
+    ctx.reply('Опишите Вашу проблему.');
     ctx.session.feedbackType = 'negative';
 });
 
 bot.on('text', async (ctx) => {
-    ctx.session = ctx.session || {};
     const feedbackType = ctx.session.feedbackType;
 
     if (feedbackType) {
         const feedback = ctx.message.text;
 
         if (feedbackType === 'positive') {
-            ctx.reply('Благодарим за обратную связь. Ваш ответ был направлен менеджеру. Мы постараемся связаться с Вами в ближайшее время!');
+            ctx.reply('Благодарим за положительный отзыв!');
             saveFeedback('positive', feedback, ctx.from.id);
             notifyAdmin(`Получен положительный отзыв\n\nОтзыв: ${feedback}`);
         } else if (feedbackType === 'negative') {
-            ctx.reply('Благодарим за обратную связь. Ваш ответ был направлен менеджеру. Мы постараемся связаться с Вами в ближайшее время!');
+            ctx.reply('Благодарим за отрицательный отзыв!');
             saveFeedback('negative', feedback, ctx.from.id);
             notifyAdmin(`Получен отрицательный отзыв\n\nОтзыв: ${feedback}`);
         }
 
         delete ctx.session.feedbackType;
+    } else {
+        ctx.reply('Пожалуйста, выберите тип отзыва: /start и отправьте отзыв.');
     }
 });
 
