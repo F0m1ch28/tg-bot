@@ -12,7 +12,7 @@ const client = new Client({
     database: process.env.PG_DATABASE,
     password: process.env.PG_PASSWORD,
     port: process.env.PG_PORT,
-    ssl: true,
+    ssl: ssl,
     connectionTimeoutMillis: 10000,
     query_timeout: 120000
 });
@@ -29,7 +29,7 @@ const FEEDBACK_INTERVAL_HOURS = 24;
 const app = express();
 app.use(bodyParser.json());
 
-const HOST_URL = 'https://tg-bot-k259.onrender.com';
+const HOST_URL = `https://${process.env.HOST_NAME}`;
 bot.telegram.setWebhook(`${HOST_URL}/webhook/${process.env.BOT_TOKEN}`);
 app.post(`/webhook/${process.env.BOT_TOKEN}`, (req, res) => {
     bot.handleUpdate(req.body);
