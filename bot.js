@@ -4,7 +4,7 @@ const { Client } = require('pg');
 const express = require('express');
 const bodyParser = require('body-parser');
 
-const ssl = false;
+const ssl = process.env.PG_SSL === 'true' ? { rejectUnauthorized: false } : false;
 
 const client = new Client({
     user: process.env.PG_USER,
