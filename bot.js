@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Telegraf, session } = require('telegraf');
+const { Telegraf, Markup, session } = require('telegraf');
 const { Client } = require('pg');
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -12,7 +12,7 @@ const client = new Client({
     database: process.env.PG_DATABASE,
     password: process.env.PG_PASSWORD,
     port: process.env.PG_PORT,
-    ssl: ssl,
+    ssl: { rejectUnauthorized: false },
     connectionTimeoutMillis: 20000,
     query_timeout: 120000
 });
@@ -24,7 +24,6 @@ client.connect()
 const bot = new Telegraf(process.env.BOT_TOKEN);
 const ADMIN_CHAT_ID = process.env.ADMIN_CHAT_ID;
 const PAGE_SIZE = 10;
-const FEEDBACK_INTERVAL_HOURS = 24;
 
 const app = express();
 app.use(bodyParser.json());
@@ -58,18 +57,7 @@ function saveFeedback(type, text, userId, contact = null) {
     );
 }
 
-// async function canSubmitFeedback(userId) {
-//     const query = 'SELECT created_at FROM feedback WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1';
-//     const res = await client.query(query, [userId]);
-//     if (res.rows.length > 0) {
-//         const lastFeedbackTime = new Date(res.rows[0].created_at);
-//         const now = new Date();
-//         const hoursSinceLastFeedback = (now - lastFeedbackTime) / (1000 * 60 * 60);
-//         console.log(`Last feedback: ${lastFeedbackTime}, Hours since last feedback: ${hoursSinceLastFeedback}`);
-//         return hoursSinceLastFeedback >= FEEDBACK_INTERVAL_HOURS;
-//     }
-//     return true;
-// }
+// Убрана проверка на возможность оставлять повторные отзывы
 
 async function showFeedbacks(ctx, page = 1, filterType = '', filterStartDate = null, filterEndDate = null) {
     const offset = (page - 1) * PAGE_SIZE;
@@ -130,7 +118,7 @@ async function showFeedbacks(ctx, page = 1, filterType = '', filterStartDate = n
 }
 
 bot.start((ctx) => {
-    ctx.reply('Здравствуйте! Я бот сети суши-баров «Вкус и Лосось» для обратной связи. Напишите ваш отзыв, чтобы оставить обратную связь.');
+    ctx.reply('Здравствуйте! Я бот сети суши-баров «Вкус и Лосось» для обратной связи. Нажмите «/start», чтобы оставить обратную связь');
 });
 
 bot.command('show_feedbacks', async (ctx) => {
@@ -164,23 +152,15 @@ bot.action(/page_(\d+)/, async (ctx) => {
 });
 
 bot.action('positive', async (ctx) => {
-    // if (await canSubmitFeedback(ctx.from.id)) {
     ctx.reply('Опишите Вашу проблему. Также, просим Вас оставить номер, дату, время заказа и ваш контактный номер телефона, через который мы сможем с Вами связаться для решения вашей проблемы');
     ctx.session = ctx.session || {};
     ctx.session.feedbackType = 'positive';
-    // } else {
-    //     ctx.reply('Вы уже оставляли отзыв недавно. Пожалуйста, попробуйте снова через 24 часа.');
-    // }
 });
 
 bot.action('negative', async (ctx) => {
-    // if (await canSubmitFeedback(ctx.from.id)) {
     ctx.reply('Опишите Вашу проблему. Также, просим Вас оставить номер, дату, время заказа и ваш контактный номер телефона, через который мы сможем с Вами связаться для решения вашей проблемы');
     ctx.session = ctx.session || {};
     ctx.session.feedbackType = 'negative';
-    // } else {
-    //     ctx.reply('Вы уже оставляли отзыв недавно. Пожалуйста, попробуйте снова через 24 часа.');
-    // }
 });
 
 bot.on('text', async (ctx) => {
