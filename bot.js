@@ -12,8 +12,8 @@ const client = new Client({
     database: process.env.PG_DATABASE,
     password: process.env.PG_PASSWORD,
     port: process.env.PG_PORT,
-    ssl: ssl,
-    connectionTimeoutMillis: 10000,
+    ssl: { rejectUnauthorized: false },
+    connectionTimeoutMillis: 20000,
     query_timeout: 120000
 });
 
