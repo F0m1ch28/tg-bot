@@ -1,5 +1,5 @@
 require('dotenv').config();
-const { Telegraf, session } = require('telegraf');
+const { Telegraf, Markup, session } = require('telegraf');
 const { Client } = require('pg');
 const express = require('express');
 const bodyParser = require('body-parser');
@@ -13,7 +13,7 @@ const client = new Client({
     password: process.env.PG_PASSWORD,
     port: process.env.PG_PORT,
     ssl: ssl,
-    connectionTimeoutMillis: 20000,
+    connectionTimeoutMillis: 10000,
     query_timeout: 120000
 });
 
@@ -130,7 +130,13 @@ async function showFeedbacks(ctx, page = 1, filterType = '', filterStartDate = n
 }
 
 bot.start((ctx) => {
-    ctx.reply('Здравствуйте! Я бот сети суши-баров «Вкус и Лосось» для обратной связи. Напишите ваш отзыв, чтобы оставить обратную связь.');
+    ctx.reply(
+        'Здравствуйте! Я бот сети суши-баров «Вкус и Лосось» для обратной связи. Нажмите «/start», чтобы оставить обратную связь',
+        Markup.inlineKeyboard([
+            Markup.button.callback('Да', 'positive'),
+            Markup.button.callback('Нет', 'negative')
+        ])
+    );
 });
 
 bot.command('show_feedbacks', async (ctx) => {
