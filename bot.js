@@ -29,7 +29,10 @@ const FEEDBACK_INTERVAL_HOURS = 24;
 const app = express();
 app.use(bodyParser.json());
 
-bot.startPolling();
+bot.telegram.deleteWebhook().then(() => {
+    console.log('Webhook deleted. Switching to polling mode.');
+    bot.startPolling();
+});
 
 bot.use(session());
 
