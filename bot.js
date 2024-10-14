@@ -126,7 +126,7 @@ async function showFeedbacks(ctx, page = 1, filterType = '', filterStartDate = n
 
 bot.start((ctx) => {
     ctx.reply(
-        'Вас всё устроило?',
+        'Здравствуйте! Я бот сети суши-баров «Вкус и Лосось» для обратной связи. Нажмите «/start», чтобы оставить обратную связь',
         Markup.inlineKeyboard([
             Markup.button.callback('Да', 'positive'),
             Markup.button.callback('Нет', 'negative')
@@ -166,7 +166,7 @@ bot.action(/page_(\d+)/, async (ctx) => {
 
 bot.action('positive', async (ctx) => {
     if (await canSubmitFeedback(ctx.from.id)) {
-        ctx.reply('Поделитесь вашими впечатлениями');
+        ctx.reply('Опишите Вашу проблему. Также, просим Вас оставить номер, дату, время заказа и ваш контактный номер телефона, через который мы сможем с Вами связаться для решения вашей проблемы');
         ctx.session = ctx.session || {};
         ctx.session.feedbackType = 'positive';
     } else {
@@ -176,7 +176,7 @@ bot.action('positive', async (ctx) => {
 
 bot.action('negative', async (ctx) => {
     if (await canSubmitFeedback(ctx.from.id)) {
-        ctx.reply('Опишите проблему и оставьте контактный номер для решения ситуации');
+        ctx.reply('Опишите Вашу проблему. Также, просим Вас оставить номер, дату, время заказа и ваш контактный номер телефона, через который мы сможем с Вами связаться для решения вашей проблемы');
         ctx.session = ctx.session || {};
         ctx.session.feedbackType = 'negative';
     } else {
@@ -192,11 +192,11 @@ bot.on('text', async (ctx) => {
         const feedback = ctx.message.text;
 
         if (feedbackType === 'positive') {
-            ctx.reply('Благодарим за обратную связь, ваши слова — наша мотивация.');
+            ctx.reply('Благодарим за обратную связь. Ваш ответ был направлен менеджеру. Мы постараемся связаться с Вами в ближайшее время!');
             saveFeedback('positive', feedback, ctx.from.id);
             notifyAdmin(`Получен положительный отзыв\n\nОтзыв: ${feedback}`);
         } else if (feedbackType === 'negative') {
-            ctx.reply('Ваш отзыв направлен в отдел контроля качества.');
+            ctx.reply('Благодарим за обратную связь. Ваш ответ был направлен менеджеру. Мы постараемся связаться с Вами в ближайшее время!');
             saveFeedback('negative', feedback, ctx.from.id);
             notifyAdmin(`Получен отрицательный отзыв\n\nОтзыв: ${feedback}`);
         }
