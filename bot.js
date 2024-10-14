@@ -130,13 +130,7 @@ async function showFeedbacks(ctx, page = 1, filterType = '', filterStartDate = n
 }
 
 bot.start((ctx) => {
-    ctx.reply(
-        'Здравствуйте! Я бот сети суши-баров «Вкус и Лосось» для обратной связи. Нажмите «/start», чтобы оставить обратную связь',
-        Markup.inlineKeyboard([
-            Markup.button.callback('Да', 'positive'),
-            Markup.button.callback('Нет', 'negative')
-        ])
-    );
+    ctx.reply('Здравствуйте! Я бот сети суши-баров «Вкус и Лосось» для обратной связи. Можете оставить ваш отзыв в любое время.');
 });
 
 bot.command('show_feedbacks', async (ctx) => {
@@ -196,16 +190,9 @@ bot.on('text', async (ctx) => {
     if (feedbackType) {
         const feedback = ctx.message.text;
 
-        if (feedbackType === 'positive') {
-            ctx.reply('Благодарим за обратную связь. Ваш ответ был направлен менеджеру. Мы постараемся связаться с Вами в ближайшее время!');
-            saveFeedback('positive', feedback, ctx.from.id);
-            notifyAdmin(`Получен положительный отзыв\n\nОтзыв: ${feedback}`);
-        } else if (feedbackType === 'negative') {
-            ctx.reply('Благодарим за обратную связь. Ваш ответ был направлен менеджеру. Мы постараемся связаться с Вами в ближайшее время!');
-            saveFeedback('negative', feedback, ctx.from.id);
-            notifyAdmin(`Получен отрицательный отзыв\n\nОтзыв: ${feedback}`);
-        }
-
+        ctx.reply('Благодарим за обратную связь. Ваш ответ был направлен менеджеру. Мы постараемся связаться с Вами в ближайшее время!');
+        saveFeedback(feedbackType, feedback, ctx.from.id);
+        notifyAdmin(`Получен отзыв (${feedbackType}): ${feedback}`);
         delete ctx.session.feedbackType;
     }
 });
