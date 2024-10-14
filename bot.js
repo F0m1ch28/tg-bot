@@ -4,13 +4,15 @@ const { Client } = require('pg');
 const express = require('express');
 const bodyParser = require('body-parser');
 
+const ssl = process.env.PG_SSL === 'true' ? { rejectUnauthorized: false } : false;
+
 const client = new Client({
     user: process.env.PG_USER,
     host: process.env.PG_HOST,
     database: process.env.PG_DATABASE,
     password: process.env.PG_PASSWORD,
     port: process.env.PG_PORT,
-    ssl: { rejectUnauthorized: false },
+    ssl: true,
     connectionTimeoutMillis: 10000,
     query_timeout: 120000
 });
@@ -43,7 +45,7 @@ function notifyAdmin(message) {
 function saveFeedback(type, text, userId, contact = null) {
     console.log(`Saving feedback: Type=${type}, Text=${text}, UserId=${userId}, Contact=${contact}`);
     client.query(
-        'INSERT INTO feedbacks (feedback_type, feedback_text, contact_info, user_id, created_at) VALUES ($1, $2, $3, $4, NOW())',
+        'INSERT INTO feedback (feedback_type, feedback_text, contact_info, user_id, created_at) VALUES ($1, $2, $3, $4, NOW())',
         [type, text, contact, userId],
         (err) => {
             if (err) {
@@ -56,7 +58,7 @@ function saveFeedback(type, text, userId, contact = null) {
 }
 
 async function canSubmitFeedback(userId) {
-    const query = 'SELECT created_at FROM feedbacks WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1';
+    const query = 'SELECT created_at FROM feedback WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1';
     const res = await client.query(query, [userId]);
     if (res.rows.length > 0) {
         const lastFeedbackTime = new Date(res.rows[0].created_at);
@@ -71,7 +73,7 @@ async function canSubmitFeedback(userId) {
 async function showFeedbacks(ctx, page = 1, filterType = '', filterStartDate = null, filterEndDate = null) {
     const offset = (page - 1) * PAGE_SIZE;
 
-    let query = 'SELECT * FROM feedbacks WHERE 1=1';
+    let query = 'SELECT * FROM feedback WHERE 1=1';
     let queryParams = [];
     let paramIndex = 1;
 
@@ -103,7 +105,7 @@ async function showFeedbacks(ctx, page = 1, filterType = '', filterStartDate = n
         ).join('\n\n');
 
         const totalFeedbacks = await client.query(
-            'SELECT COUNT(*) FROM feedbacks WHERE 1=1' +
+            'SELECT COUNT(*) FROM feedback WHERE 1=1' +
             (filterType ? ` AND feedback_type = '${filterType}'` : '') +
             (filterStartDate ? ` AND created_at >= '${new Date(filterStartDate).toISOString()}'` : '') +
             (filterEndDate ? ` AND created_at <= '${new Date(filterEndDate).toISOString()}'` : '')
