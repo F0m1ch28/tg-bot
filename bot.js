@@ -190,19 +190,10 @@ bot.on('text', async (ctx) => {
     if (feedbackType) {
         const feedback = ctx.message.text;
 
-        if (feedbackType === 'positive') {
-            ctx.reply('Благодарим за обратную связь. Ваш ответ был направлен менеджеру. Мы постараемся связаться с Вами в ближайшее время!');
-            saveFeedback('positive', feedback, ctx.from.id);
-            notifyAdmin(`Получен положительный отзыв\n\nОтзыв: ${feedback}`);
-        } else if (feedbackType === 'negative') {
-            ctx.reply('Благодарим за обратную связь. Ваш ответ был направлен менеджеру. Мы постараемся связаться с Вами в ближайшее время!');
-            saveFeedback('negative', feedback, ctx.from.id);
-            notifyAdmin(`Получен отрицательный отзыв\n\nОтзыв: ${feedback}`);
-        }
-
+        ctx.reply('Благодарим за обратную связь. Ваш ответ был направлен менеджеру. Мы постараемся связаться с Вами в ближайшее время!');
+        saveFeedback(feedbackType, feedback, ctx.from.id);
+        notifyAdmin(`Получен отзыв (${feedbackType}): ${feedback}`);
         delete ctx.session.feedbackType;
-    } else {
-        ctx.reply('Пожалуйста, укажите, положительный или отрицательный отзыв вы хотите оставить.');
     }
 });
 
